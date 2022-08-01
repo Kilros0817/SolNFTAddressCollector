@@ -1,5 +1,5 @@
 const solanaWeb3 = require("@solana/web3.js");
-const fs = require('fs');
+const fs = require("fs");
 const searchAddress = "CYpwfWrLXM7r5rgLUsbNQq6s8syGdV4WnwF55hT6i5y7"; //example 'vines1vzrYbzLMRdu58ou5XTby4qAqVRLmqo36NKPTg'
 
 const endpoint =
@@ -8,23 +8,34 @@ const solanaConnection = new solanaWeb3.Connection(endpoint);
 
 const getTransactions = async (address) => {
   const pubKey = new solanaWeb3.PublicKey(address);
+  const recentSig = fs.readFileSync("recentSlot.txt", "utf8");
+
   let transactionList = await solanaConnection.getSignaturesForAddress(
     pubKey,
-    {},
+    {until: recentSig},
     "confirmed"
   );
-  let tokenList = [];
+
+  const newSig = transactionList[0].signature;
+
+  fs.writeFile("recentSlot.txt", `${newSig}`, function (err) {
+    if (err) throw err;
+  });
+
+  fs.writeFile("tokenList.txt", '', function (err) {
+    if (err) throw err;
+  });
+
   transactionList.forEach(async (transaction, i) => {
     const tx = await solanaConnection.getParsedTransaction(
       transaction.signature
     );
-    const slot = tx.slot;
     const err = tx.meta.err;
-    
-    if (slot > 143540679 && err == null) {
+
+    if (err == null) {
       const accountKeys = tx.transaction.message.instructions[0].accounts;
       const tokenAddress = accountKeys[5].toBase58();
-      fs.appendFile('tokenList.txt',  `${tokenAddress}\n`, function (err) {
+      fs.appendFile("tokenList.txt", `${tokenAddress}\n`, function (err) {
         if (err) throw err;
       });
     }
